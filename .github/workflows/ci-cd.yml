@@ -1,0 +1,31 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Build Docker image
+      run: |
+        docker build -t flask-todo .
+
+    - name: SSH into EC2 and Deploy
+      uses: appleboy/ssh-action@v0.1.6
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ubuntu
+        key: ${{ secrets.EC2_KEY }}
+        script: |
+          cd ~/Flask-App
+          git pull origin main
+          docker stop todo-app || true
+          docker rm todo-app || true
+          docker build -t flask-todo .
+          docker run -d --name todo-app -p 8000:8000 flask-todo
